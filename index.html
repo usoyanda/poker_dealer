@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PokerIQ v4 + Dealer Academy</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --green:#1a6b3a;--green-light:#e8f5ee;--green-dark:#0f4223;--green-border:#639922;
+  --green-bg:#eaf3de;--green-text:#173404;
+  --gold:#c9a227;--gold-dark:#a8841e;
+  --purple:#5b3fa6;--purple-dark:#3c2870;--purple-light:#ede9fb;
+  --icm:#7a1fa2;--icm-light:#f3e5f5;--icm-border:#ab47bc;
+  --bg:#f7f5f0;--surface:#fff;--surface2:#f1efe8;
+  --border:rgba(0,0,0,0.1);--border2:rgba(0,0,0,0.18);
+  --text:#1a1a1a;--text2:#5a5a5a;--text3:#8a8a8a;
+  --blue-bg:#e6f1fb;--blue-label:#185fa5;
+  --amber-bg:#faeeda;--amber-label:#854f0b;
+  --red-bg:#fcebeb;--red-text:#501313;--red-border:#a32d2d;
+}
+body{font-family:'Georgia','Hiragino Mincho ProN',serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* TOP BAR */
+.top-bar{background:var(--green-dark);padding:0 1rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,0.25);min-height:52px;gap:8px;flex-wrap:wrap;}
+.top-bar.dealer-mode{background:var(--purple-dark);}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.logo-main{font-size:16px;font-weight:bold;color:#fff;letter-spacing:.05em;}
+.logo-sub{font-size:9px;opacity:.6;font-family:sans-serif;color:#fff;letter-spacing:.1em;}
+.top-right{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.mode-switch{display:flex;background:rgba(255,255,255,.1);border-radius:20px;padding:3px;gap:2px;}
+.mode-btn{padding:4px 12px;border-radius:18px;font-size:11px;font-family:sans-serif;cursor:pointer;border:none;background:transparent;color:rgba(255,255,255,.6);font-weight:bold;transition:all .2s;white-space:nowrap;}
+.mode-btn.active{background:rgba(255,255,255,.9);color:var(--green-dark);}
+.dealer-mode .mode-btn.active{color:var(--purple-dark);}
+.nav-tabs{display:flex;gap:3px;}
+.nav-tab{padding:4px 10px;border-radius:16px;font-size:11px;font-family:sans-serif;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:transparent;color:rgba(255,255,255,.65);transition:all .15s;white-space:nowrap;}
+.nav-tab:hover{background:rgba(255,255,255,.1);color:#fff;}
+.nav-tab.active{background:rgba(255,255,255,.18);color:#fff;border-color:rgba(255,255,255,.55);}
+
+/* LOADING */
+.loading-screen{text-align:center;padding:4rem 1rem;}
+.loading-icon{font-size:40px;animation:spin 1s linear infinite;display:inline-block;margin-bottom:1rem;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg)};}
+.loading-text{font-family:sans-serif;font-size:14px;color:var(--text2);}
+.error-screen{text-align:center;padding:3rem 1rem;}
+.error-icon{font-size:36px;margin-bottom:1rem;}
+.error-text{font-family:sans-serif;font-size:13px;color:var(--red-text);line-height:1.7;background:var(--red-bg);border:1px solid var(--red-border);border-radius:8px;padding:1rem;margin-bottom:1rem;}
+
+/* MAIN */
+.main{max-width:780px;margin:0 auto;padding:1rem;}
+.page{display:none;}.page.active{display:block;}
+
+/* CATEGORY SELECTOR */
+.cat-selector{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:1.25rem;margin-bottom:1rem;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.cat-selector-title{font-family:sans-serif;font-size:14px;font-weight:bold;color:var(--text);margin-bottom:.875rem;}
+.cat-groups{display:flex;flex-direction:column;gap:10px;}
+.cat-group-label{font-family:sans-serif;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
+.cat-chips{display:flex;flex-wrap:wrap;gap:6px;}
+.cat-chip{padding:6px 13px;border-radius:20px;font-size:12px;font-family:sans-serif;cursor:pointer;border:1.5px solid var(--border2);background:var(--surface);color:var(--text2);transition:all .15s;user-select:none;}
+.cat-chip:hover{border-color:var(--green);color:var(--green);}
+.cat-chip.selected{background:var(--green);color:#fff;border-color:var(--green);}
+.cat-chip.icm-chip:hover{border-color:var(--icm);color:var(--icm);}
+.cat-chip.icm-chip.selected{background:var(--icm);border-color:var(--icm);color:#fff;}
+.cat-actions{display:flex;gap:8px;margin-top:1rem;align-items:center;flex-wrap:wrap;}
+.q-count-info{font-family:sans-serif;font-size:13px;color:var(--text2);}
+.q-count-num{font-weight:bold;color:var(--green);}
+
+/* PROGRESS */
+.progress-area{display:flex;align-items:center;gap:10px;margin-bottom:1rem;}
+.progress-label{font-family:sans-serif;font-size:13px;color:var(--text2);white-space:nowrap;}
+.progress-bar-wrap{flex:1;height:5px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.progress-bar-fill{height:100%;border-radius:3px;transition:width .4s ease;}
+.poker-fill{background:var(--green);}
+.dealer-fill{background:var(--purple);}
+.icm-fill{background:var(--icm);}
+.score-chip{font-family:sans-serif;font-size:12px;font-weight:bold;padding:3px 10px;border-radius:20px;border:1px solid;white-space:nowrap;}
+.score-chip-poker{background:var(--green-light);color:var(--green-dark);border-color:var(--green-border);}
+.score-chip-dealer{background:var(--purple-light);color:var(--purple-dark);border-color:#9b7ef0;}
+
+/* QUESTION CARD */
+.q-card{background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.07);}
+.q-card-header{padding:.75rem 1.25rem;display:flex;align-items:center;justify-content:space-between;}
+.q-card-header.poker-header{background:var(--green-dark);}
+.q-card-header.dealer-header{background:var(--purple-dark);}
+.q-card-header.icm-header{background:#4a148c;}
+.q-num{font-family:sans-serif;font-size:12px;color:rgba(255,255,255,.55);letter-spacing:.05em;}
+.q-cat{font-family:sans-serif;font-size:11px;padding:3px 10px;border-radius:20px;color:#fff;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.12);}
+.q-body{padding:1.25rem;}
+.situation-info{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:1rem;}
+.info-chip{font-family:sans-serif;font-size:11px;padding:3px 9px;background:var(--surface2);border-radius:20px;color:var(--text2);border:1px solid var(--border);}
+.info-chip.icm-badge{background:var(--icm-light);color:var(--icm);border-color:var(--icm-border);}
+
+/* FELT */
+.board-area{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:1rem 0;padding:.875rem 1rem;background:#155c31;background-image:radial-gradient(circle at 50%,#1f7a43 0%,#0f4a26 100%);border-radius:8px;border:2px solid #0a3319;}
+.board-divider{width:1px;height:50px;background:rgba(255,255,255,.18);margin:0 4px;}
+.board-label-felt{font-family:sans-serif;font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.1em;text-transform:uppercase;}
+.card{width:42px;height:58px;border-radius:5px;background:#fff;border:1px solid rgba(0,0,0,.2);display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,.3);}
+.card-rank{font-size:15px;font-weight:bold;line-height:1;}
+.card-suit{font-size:13px;line-height:1;}
+.card.red .card-rank,.card.red .card-suit{color:#c0392b;}
+.card.black .card-rank,.card.black .card-suit{color:#1a1a2e;}
+
+/* ICM BOX */
+.icm-box{background:#1a0030;background-image:radial-gradient(circle at 50%,#2d0050 0%,#110020 100%);border-radius:8px;border:2px solid #4a148c;padding:1rem 1.25rem;margin:1rem 0;color:rgba(255,255,255,.9);font-family:sans-serif;font-size:13px;line-height:1.65;}
+.icm-box-title{font-size:10px;letter-spacing:.12em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:6px;}
+.icm-stack-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;margin-top:8px;}
+.icm-stack-row{background:rgba(255,255,255,.08);border-radius:6px;padding:5px 8px;font-size:12px;display:flex;justify-content:space-between;}
+.icm-stack-label{color:rgba(255,255,255,.5);}
+.icm-stack-val{font-weight:bold;color:#ce93d8;}
+
+/* SCENARIO BOX */
+.scenario-box{background:#2d1f5e;background-image:radial-gradient(circle at 50%,#3a2878 0%,#1e1240 100%);border-radius:8px;border:2px solid #1a0f40;padding:1rem 1.25rem;margin:1rem 0;color:rgba(255,255,255,.9);font-family:sans-serif;font-size:13.5px;line-height:1.65;}
+.scenario-title{font-size:10px;letter-spacing:.12em;color:rgba(255,255,255,.4);text-transform:uppercase;margin-bottom:6px;}
+.scenario-game-badge{display:inline-block;font-size:11px;font-weight:bold;padding:2px 10px;border-radius:10px;margin-bottom:8px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.2);}
+
+/* QUESTION & OPTIONS */
+.question-text{font-size:15px;line-height:1.75;color:var(--text);margin:1rem 0;font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',sans-serif;}
+.options-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:1rem 0;}
+.option-btn{padding:11px 13px;border:1.5px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text);font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',sans-serif;font-size:13.5px;cursor:pointer;text-align:left;transition:all .15s;line-height:1.4;}
+.option-btn:hover:not(:disabled){background:var(--surface2);border-color:var(--green);transform:translateY(-1px);}
+.option-btn:disabled{cursor:default;transform:none;}
+.option-btn.correct{background:var(--green-bg);border-color:var(--green-border);color:var(--green-text);font-weight:bold;}
+.option-btn.wrong{background:var(--red-bg);border-color:var(--red-border);color:var(--red-text);text-decoration:line-through;}
+.option-btn.reveal-correct{background:var(--green-bg);border-color:var(--green-border);color:var(--green-text);font-weight:bold;}
+
+/* RESULT & EXPLANATION */
+.result-banner{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;margin:.875rem 0;font-family:sans-serif;font-size:15px;font-weight:bold;}
+.result-banner.correct{background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);}
+.result-banner.wrong{background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);}
+.explanation-box{margin-top:1rem;border-radius:8px;overflow:hidden;border:1px solid var(--border);}
+.exp-section{padding:1rem 1.125rem;}
+.exp-section+.exp-section{border-top:1px solid var(--border);}
+.exp-gto{background:var(--blue-bg);}
+.exp-exploit{background:var(--amber-bg);}
+.exp-icm{background:#f3e5f5;}
+.exp-rule{background:#f0edfb;}
+.exp-trap{background:#fff5f5;}
+.exp-label{font-family:sans-serif;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px;}
+.exp-gto .exp-label{color:var(--blue-label);}
+.exp-exploit .exp-label{color:var(--amber-label);}
+.exp-icm .exp-label{color:#6a1b9a;}
+.exp-rule .exp-label{color:#5b3fa6;}
+.exp-trap .exp-label{color:#a32d2d;}
+.exp-text{font-size:13.5px;line-height:1.7;color:var(--text);font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',sans-serif;}
+
+/* ACTIONS */
+.action-row{display:flex;justify-content:space-between;align-items:center;margin-top:1rem;gap:8px;}
+.btn-primary{padding:9px 22px;background:var(--green);color:#fff;border:none;border-radius:8px;font-family:sans-serif;font-size:13px;cursor:pointer;font-weight:bold;transition:all .15s;}
+.btn-primary:hover{background:var(--green-dark);transform:translateY(-1px);}
+.btn-primary.dealer{background:var(--purple);}
+.btn-primary.dealer:hover{background:var(--purple-dark);}
+.btn-primary.icm-btn{background:var(--icm);}
+.btn-secondary{padding:9px 14px;background:transparent;color:var(--text2);border:1px solid var(--border2);border-radius:8px;font-family:sans-serif;font-size:13px;cursor:pointer;}
+.btn-secondary:hover{background:var(--surface2);}
+
+/* COMPLETE */
+.complete-screen{background:var(--surface);border-radius:12px;padding:2rem 1.5rem;text-align:center;border:1px solid var(--border);box-shadow:0 2px 12px rgba(0,0,0,.06);}
+.complete-suit{font-size:48px;margin-bottom:1rem;}
+.complete-title{font-size:20px;font-weight:bold;margin-bottom:.5rem;}
+.complete-sub{font-family:sans-serif;font-size:14px;color:var(--text2);margin-bottom:1.5rem;}
+.grade-badge{display:inline-block;padding:3px 14px;border-radius:20px;font-family:sans-serif;font-size:15px;font-weight:bold;margin-left:8px;}
+.stats-row{display:flex;justify-content:center;gap:12px;margin:1.25rem 0;flex-wrap:wrap;}
+.stat-box{background:var(--surface2);border-radius:8px;padding:.875rem 1.25rem;min-width:90px;}
+.stat-lbl{font-family:sans-serif;font-size:11px;color:var(--text3);margin-bottom:4px;}
+.stat-val{font-size:26px;font-weight:bold;}
+.btn-gold{padding:11px 26px;background:var(--gold);color:#fff;border:none;border-radius:8px;font-family:sans-serif;font-size:13px;font-weight:bold;cursor:pointer;margin:4px;transition:all .15s;}
+.btn-gold:hover{background:var(--gold-dark);transform:translateY(-1px);}
+
+/* SECTION CARDS */
+.section-card{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:1.25rem;margin-bottom:1rem;box-shadow:0 1px 4px rgba(0,0,0,.05);}
+.section-title{font-family:sans-serif;font-size:14px;font-weight:bold;color:var(--text);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:2px solid var(--green-light);}
+.section-title.dealer-title{border-bottom-color:var(--purple-light);}
+.mode-segment{display:flex;gap:4px;margin-bottom:1rem;background:var(--surface2);padding:3px;border-radius:8px;}
+.seg-btn{flex:1;padding:6px;border:none;border-radius:6px;font-family:sans-serif;font-size:12px;cursor:pointer;background:transparent;color:var(--text2);font-weight:bold;transition:all .15s;}
+.seg-btn.active-poker{background:var(--green);color:#fff;}
+.seg-btn.active-dealer{background:var(--purple);color:#fff;}
+
+/* HISTORY TABLE */
+.history-table{width:100%;border-collapse:collapse;font-family:sans-serif;font-size:12px;}
+.history-table th{font-weight:bold;color:var(--text2);text-align:left;padding:7px 9px;border-bottom:1px solid var(--border);background:var(--surface2);}
+.history-table td{padding:8px 9px;border-bottom:1px solid var(--border);color:var(--text);}
+.history-table tr:last-child td{border-bottom:none;}
+.history-table tr:hover td{background:var(--surface2);}
+.tag{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:bold;}
+.tag-ok{background:var(--green-bg);color:var(--green-text);}
+.tag-ng{background:var(--red-bg);color:var(--red-text);}
+.tag-game{background:var(--purple-light);color:var(--purple-dark);}
+.tag-icm{background:#f3e5f5;color:#4a148c;}
+
+/* REPORT */
+.cat-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+.cat-row:last-child{border-bottom:none;}
+.cat-name{font-family:sans-serif;font-size:12px;color:var(--text);flex:1;}
+.cat-bar-wrap{width:120px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden;}
+.cat-bar-fill{height:100%;border-radius:3px;transition:width .5s ease;}
+.cat-pct{font-family:sans-serif;font-size:12px;font-weight:bold;width:36px;text-align:right;}
+.advice-wrap{border:1px solid var(--border);border-radius:8px;overflow:hidden;}
+.advice-section{padding:.875rem 1rem;}
+.advice-section+.advice-section{border-top:1px solid var(--border);}
+.advice-header{font-family:sans-serif;font-size:11px;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px;}
+.advice-weak{background:var(--amber-bg);}
+.advice-weak .advice-header{color:var(--amber-label);}
+.advice-strong{background:var(--blue-bg);}
+.advice-strong .advice-header{color:var(--blue-label);}
+.advice-text{font-size:13px;line-height:1.7;color:var(--text);font-family:'Hiragino Kaku Gothic ProN','Hiragino Sans',sans-serif;}
+.advice-text ul{margin-top:5px;padding-left:1.2rem;}
+.advice-text li{margin-bottom:4px;}
+.report-stats-row{display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;}
+.report-stat{flex:1;min-width:75px;background:var(--surface2);border-radius:8px;padding:.75rem;text-align:center;}
+.report-stat-lbl{font-family:sans-serif;font-size:11px;color:var(--text3);margin-bottom:3px;}
+.report-stat-val{font-size:22px;font-weight:bold;}
+
+/* DATA PAGE */
+.migration-box{background:var(--surface);border-radius:12px;border:2px dashed var(--border2);padding:1.25rem;margin-bottom:1rem;text-align:center;}
+.migration-title{font-family:sans-serif;font-size:14px;font-weight:bold;color:var(--text);margin-bottom:.5rem;}
+.migration-sub{font-family:sans-serif;font-size:12px;color:var(--text3);margin-bottom:1rem;line-height:1.6;}
+.migration-btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.btn-export{padding:8px 18px;background:var(--green-bg);color:var(--green-dark);border:1px solid var(--green-border);border-radius:8px;font-family:sans-serif;font-size:13px;font-weight:bold;cursor:pointer;}
+.btn-import{padding:8px 18px;background:var(--blue-bg);color:var(--blue-label);border:1px solid var(--blue-label);border-radius:8px;font-family:sans-serif;font-size:13px;font-weight:bold;cursor:pointer;}
+.migration-msg{font-family:sans-serif;font-size:12px;margin-top:8px;padding:6px 12px;border-radius:6px;}
+.migration-msg.ok{background:var(--green-bg);color:var(--green-text);}
+.migration-msg.err{background:var(--red-bg);color:var(--red-text);}
+.qs-info-box{background:var(--surface);border-radius:12px;border:1px solid var(--border);padding:1.25rem;margin-bottom:1rem;}
+.qs-info-title{font-family:sans-serif;font-size:14px;font-weight:bold;color:var(--text);margin-bottom:.75rem;padding-bottom:.5rem;border-bottom:2px solid var(--green-light);}
+.qs-info-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);font-family:sans-serif;font-size:13px;}
+.qs-info-row:last-child{border-bottom:none;}
+.qs-info-label{color:var(--text2);}
+.qs-info-val{font-weight:bold;color:var(--green);}
+
+.empty-state{text-align:center;padding:2.5rem 1rem;}
+.empty-suit{font-size:36px;margin-bottom:1rem;opacity:.3;}
+.empty-text{font-family:sans-serif;font-size:13px;color:var(--text3);line-height:1.6;}
+
+@media(max-width:520px){
+  .options-grid{grid-template-columns:1fr;}
+  .nav-tab{padding:4px 7px;font-size:10px;}
+  .mode-btn{padding:4px 8px;font-size:10px;}
+  .cat-bar-wrap{width:80px;}
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar" id="topBar">
+  <div class="logo">
+    <span style="font-size:20px;color:#fff">♣</span>
+    <div>
+      <div class="logo-main" id="logoMain">PokerIQ v4</div>
+      <div class="logo-sub" id="logoSub">TOURNAMENT TRAINER</div>
+    </div>
+  </div>
+  <div class="top-right">
+    <div class="mode-switch">
+      <button class="mode-btn active" id="modePoker" onclick="switchMode('poker')">♠ ポーカー戦略</button>
+      <button class="mode-btn" id="modeDealer" onclick="switchMode('dealer')">🎰 ディーラー研修</button>
+    </div>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="showPage('quiz',this)">クイズ</button>
+      <button class="nav-tab" onclick="showPage('history',this)">履歴</button>
+      <button class="nav-tab" onclick="showPage('report',this)">レポート</button>
+      <button class="nav-tab" onclick="showPage('chip',this)">🎰チップ</button>
+      <button class="nav-tab" onclick="showPage('data',this)">データ</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div id="page-quiz" class="page active"></div>
+  <div id="page-chip" class="page"></div>
+  <div id="page-history" class="page"></div>
+  <div id="page-report" class="page"></div>
+  <div id="page-data" class="page"></div>
+</div>
+
+<script>
+/* ═══ JSON LOADER ═══ */
+let POKER_Q = [];
+let DEALER_Q = [];
+let dataLoaded = false;
+let loadError = false;
+
+async function loadQuestions() {
+  showLoading();
+  try {
+    const [pRes, dRes] = await Promise.all([
+      fetch('./questions_poker.json'),
+      fetch('./questions_dealer.json')
+    ]);
+    if (!pRes.ok || !dRes.ok) throw new Error('ファイルの読み込みに失敗しました');
+    POKER_Q = await pRes.json();
+    DEALER_Q = await dRes.json();
+    dataLoaded = true;
+    renderCatSelector();
+  } catch(e) {
+    loadError = true;
+    showError(e.message);
+  }
+}
+
+function showLoading() {
+  document.getElementById('page-quiz').innerHTML = `
+    <div class="loading-screen">
+      <div class="loading-icon">♣</div>
+      <div class="loading-text">問題データを読み込み中...</div>
+    </div>`;
+}
+
+function showError(msg) {
+  document.getElementById('page-quiz').innerHTML = `
+    <div class="error-screen">
+      <div class="error-icon">⚠️</div>
+      <div class="error-text">
+        問題データの読み込みに失敗しました。<br>
+        <strong>questions_poker.json</strong> と <strong>questions_dealer.json</strong> が<br>
+        index.htmlと同じフォルダに存在するか確認してください。<br><br>
+        エラー詳細：${msg}
+      </div>
+      <button class="btn-primary" onclick="loadQuestions()">再読み込み</button>
+    </div>`;
+}
+
+/* ═══ CATEGORY DEFINITIONS ═══ */
+const POKER_CAT_DEF = {
+  'プリフロップ': {group:'基本戦略'},
+  'ポストフロップ': {group:'基本戦略'},
+  'ターン/リバー': {group:'基本戦略'},
+  'ベットサイズ': {group:'基本戦略'},
+  'スチール/ポジション': {group:'基本戦略'},
+  '3-betポット': {group:'アドバンスト'},
+  'オールイン判断': {group:'アドバンスト'},
+  'ICM': {group:'ICM特化', isICM:true},
+  'キャッシュゲーム': {group:'ゲーム形式'},
+};
+const ICM_SUBS = ['バブル','ファイナルテーブル','残り20%'];
+const DEALER_CATS_DEF = ['ポーカー','ブラックジャック','バカラ','ルーレット'];
+
+/* ═══ STATE ═══ */
+let currentMode = 'poker';
+let selectedCats = new Set(Object.keys(POKER_CAT_DEF));
+let selectedICMSubs = new Set(ICM_SUBS);
+let questionQueue = [];
+let currentQ = 0;
+let sessionAnswers = [];
+let answered = false;
+let historyView = 'poker';
+let reportView = 'poker';
+let quizStarted = false;
+
+/* ═══ STORAGE ═══ */
+function getHist(m){try{return JSON.parse(localStorage.getItem('piq4_'+m)||'[]');}catch(e){return[];}}
+function saveHist(m,a){try{localStorage.setItem('piq4_'+m,JSON.stringify(a));}catch(e){}}
+
+/* ═══ MODE ═══ */
+function switchMode(mode) {
+  if(mode===currentMode)return;
+  currentMode=mode;
+  quizStarted=false;currentQ=0;sessionAnswers=[];answered=false;questionQueue=[];
+  selectedCats=new Set(mode==='poker'?Object.keys(POKER_CAT_DEF):DEALER_CATS_DEF);
+  selectedICMSubs=new Set(ICM_SUBS);
+  const bar=document.getElementById('topBar');
+  if(mode==='dealer'){
+    bar.classList.add('dealer-mode');
+    document.getElementById('logoMain').textContent='Dealer Academy';
+    document.getElementById('logoSub').textContent='CASINO DEALER TRAINING';
+    document.getElementById('modeDealer').classList.add('active');
+    document.getElementById('modePoker').classList.remove('active');
+  } else {
+    bar.classList.remove('dealer-mode');
+    document.getElementById('logoMain').textContent='PokerIQ v4';
+    document.getElementById('logoSub').textContent='TOURNAMENT TRAINER';
+    document.getElementById('modePoker').classList.add('active');
+    document.getElementById('modeDealer').classList.remove('active');
+  }
+  showPage('quiz',null);
+}
+
+/* ═══ PAGE NAV ═══ */
+function showPage(name,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn)btn.classList.add('active');
+  else{const m={quiz:0,history:1,report:2,chip:3,data:4};const ts=document.querySelectorAll('.nav-tab');if(m[name]!==undefined)ts[m[name]].classList.add('active');}
+  if(name==='quiz'){if(!dataLoaded)loadQuestions();else if(!quizStarted)renderCatSelector();else renderQuiz();}
+  if(name==='history')renderHistory();
+  if(name==='report')renderReport();
+  if(name==='chip')renderChip();
+  if(name==='data')renderData();
+}
+
+/* ═══ CATEGORY SELECTOR ═══ */
+function getFilteredPokerQ(){
+  return POKER_Q.filter(q=>{
+    if(!selectedCats.has(q.cat))return false;
+    if(q.cat==='ICM'&&!selectedICMSubs.has(q.sub))return false;
+    return true;
+  });
+}
+
+function renderCatSelector(){
+  const container=document.getElementById('page-quiz');
+  const isDealer=currentMode==='dealer';
+
+  if(isDealer){
+    const chips=DEALER_CATS_DEF.map(c=>`<span class="cat-chip${selectedCats.has(c)?' selected':''}" onclick="toggleCat('${c}')">${c}</span>`).join('');
+    const count=DEALER_Q.filter(q=>selectedCats.has(q.cat)).length;
+    container.innerHTML=`
+      <div class="cat-selector">
+        <div class="cat-selector-title">🎰 ゲーム種別を選択（計${DEALER_Q.length}問）</div>
+        <div class="cat-chips">${chips}</div>
+        <div class="cat-actions">
+          <span class="q-count-info">対象：<span class="q-count-num">${count}</span>問</span>
+          <button class="btn-primary dealer" onclick="startQuiz()">クイズ開始</button>
+          <button class="btn-secondary" onclick="selectAll()">全選択</button>
+        </div>
+      </div>`;
+  } else {
+    const groups={};
+    Object.entries(POKER_CAT_DEF).forEach(([k,v])=>{
+      if(!groups[v.group])groups[v.group]=[];
+      groups[v.group].push([k,v]);
+    });
+    let gHTML='';
+    Object.entries(groups).forEach(([g,items])=>{
+      const chips=items.map(([k,v])=>`<span class="cat-chip${v.isICM?' icm-chip':''}${selectedCats.has(k)?' selected':''}" onclick="toggleCat('${k}')">${k}</span>`).join('');
+      let subHTML='';
+      if(g==='ICM特化'){
+        const sc=ICM_SUBS.map(s=>`<span class="cat-chip icm-chip${selectedICMSubs.has(s)?' selected':''}" style="font-size:11px" onclick="toggleSub('${s}')">${s}</span>`).join('');
+        subHTML=`<div style="margin-top:6px;padding-left:8px;display:flex;flex-wrap:wrap;gap:5px;align-items:center"><span style="font-size:11px;color:var(--text3);font-family:sans-serif">└ステージ：</span>${sc}</div>`;
+      }
+      gHTML+=`<div><div class="cat-group-label">${g}</div><div class="cat-chips">${chips}</div>${subHTML}</div>`;
+    });
+    const count=getFilteredPokerQ().length;
+    container.innerHTML=`
+      <div class="cat-selector">
+        <div class="cat-selector-title">♠ カテゴリを選択（計${POKER_Q.length}問）</div>
+        <div class="cat-groups">${gHTML}</div>
+        <div class="cat-actions">
+          <span class="q-count-info">対象：<span class="q-count-num">${count}</span>問</span>
+          <button class="btn-primary" onclick="startQuiz()">クイズ開始（10問）</button>
+          <button class="btn-secondary" onclick="selectAll()">全選択</button>
+        </div>
+      </div>`;
+  }
+}
+
+function toggleCat(c){if(selectedCats.has(c))selectedCats.delete(c);else selectedCats.add(c);renderCatSelector();}
+function toggleSub(s){if(selectedICMSubs.has(s))selectedICMSubs.delete(s);else selectedICMSubs.add(s);renderCatSelector();}
+function selectAll(){
+  if(currentMode==='poker'){selectedCats=new Set(Object.keys(POKER_CAT_DEF));selectedICMSubs=new Set(ICM_SUBS);}
+  else selectedCats=new Set(DEALER_CATS_DEF);
+  renderCatSelector();
+}
+
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]];}return b;}
+
+function startQuiz(){
+  const isDealer=currentMode==='dealer';
+  const pool=isDealer?DEALER_Q.filter(q=>selectedCats.has(q.cat)):getFilteredPokerQ();
+  if(pool.length===0){alert('少なくとも1つのカテゴリを選択してください');return;}
+  questionQueue=shuffle(pool).slice(0,Math.min(10,pool.length));
+  currentQ=0;sessionAnswers=[];answered=false;quizStarted=true;
+  renderQuiz();
+}
+
+/* ═══ RENDER QUIZ ═══ */
+function mkCard(r,s,c){return`<div class="card ${c}"><span class="card-rank">${r}</span><span class="card-suit">${s}</span></div>`;}
+
+function renderQuiz(){
+  const container=document.getElementById('page-quiz');
+  if(!quizStarted){renderCatSelector();return;}
+  if(currentQ>=questionQueue.length){renderComplete();return;}
+  const q=questionQueue[currentQ];
+  answered=false;
+  const pct=(currentQ/questionQueue.length)*100;
+  const csf=sessionAnswers.filter(a=>a.correct).length;
+  const isDealer=currentMode==='dealer';
+  const isICM=q.cat==='ICM';
+
+  const hClass=isDealer?'dealer-header':isICM?'icm-header':'poker-header';
+  const fClass=isDealer?'dealer-fill':isICM?'icm-fill':'poker-fill';
+  const cClass=isDealer?'score-chip-dealer':'score-chip-poker';
+  const btnClass=isDealer?'btn-primary dealer':isICM?'btn-primary icm-btn':'btn-primary';
+
+  let midHTML='';
+  if(isDealer){
+    const ge={POKER:'♠',BLACKJACK:'🃏',BACCARAT:'💎',ROULETTE:'🎡'};
+    midHTML=`<div class="scenario-box"><div class="scenario-title">シナリオ</div><span class="scenario-game-badge">${ge[q.game]||''} ${q.game}</span><div>${q.scenario}</div></div>`;
+  } else {
+    const sitHTML=Object.values(q.sit).map(v=>`<span class="info-chip${isICM?' icm-badge':''}">${v}</span>`).join('');
+    const holeHTML=(q.hole||[]).map(c=>mkCard(c[0],c[1],c[2])).join('');
+    let boardHTML='';
+    if(q.board&&q.board.length>0){boardHTML=`<div class="board-divider"></div><span class="board-label-felt">Board</span>`+(q.board.map(c=>mkCard(c[0],c[1],c[2])).join(''));}
+    let icmHTML='';
+    if(q.icmStacks){
+      const rows=Object.entries(q.icmStacks).map(([l,v])=>`<div class="icm-stack-row"><span class="icm-stack-label">${l}</span><span class="icm-stack-val">${v}</span></div>`).join('');
+      icmHTML=`<div class="icm-box"><div class="icm-box-title">スタック状況</div><div class="icm-stack-grid">${rows}</div></div>`;
+    }
+    midHTML=`<div class="situation-info">${sitHTML}</div>
+    <div class="board-area"><span class="board-label-felt">Hole</span><div style="display:flex;gap:5px">${holeHTML}</div>${boardHTML}</div>${icmHTML}`;
+  }
+
+  const optsHTML=q.opts.map((o,i)=>`<button class="option-btn" id="opt-${i}" onclick="selectAnswer(${i})">${o}</button>`).join('');
+
+  container.innerHTML=`
+    <div class="progress-area">
+      <span class="progress-label">問 ${currentQ+1}/${questionQueue.length}</span>
+      <div class="progress-bar-wrap"><div class="progress-bar-fill ${fClass}" style="width:${pct}%"></div></div>
+      <span class="score-chip ${cClass}">正解 ${csf}</span>
+    </div>
+    <div class="q-card">
+      <div class="q-card-header ${hClass}">
+        <span class="q-num">QUESTION ${currentQ+1}</span>
+        <span class="q-cat">${isICM?'ICM/'+q.sub:q.cat}</span>
+      </div>
+      <div class="q-body">
+        ${midHTML}
+        <p class="question-text">${q.q}</p>
+        <div class="options-grid">${optsHTML}</div>
+        <div id="feedback-area"></div>
+      </div>
+    </div>
+    <div style="margin-top:.75rem;text-align:right">
+      <button class="btn-secondary" onclick="backToSelector()" style="font-size:12px">← カテゴリ選択に戻る</button>
+    </div>`;
+}
+
+function backToSelector(){quizStarted=false;renderCatSelector();}
+
+/* ═══ ANSWER ═══ */
+function selectAnswer(idx){
+  if(answered)return;
+  answered=true;
+  const q=questionQueue[currentQ];
+  const isDealer=currentMode==='dealer';
+  const isICM=q.cat==='ICM';
+  const isCorrect=idx===q.cor;
+
+  sessionAnswers.push({qid:q.id,cat:q.cat,sub:q.sub||null,game:q.game||null,correct:isCorrect,date:new Date().toLocaleDateString('ja-JP'),mode:currentMode});
+
+  for(let i=0;i<q.opts.length;i++){
+    const btn=document.getElementById('opt-'+i);
+    btn.disabled=true;
+    if(i===q.cor)btn.classList.add('reveal-correct');
+    if(i===idx&&!isCorrect)btn.classList.add('wrong');
+  }
+
+  let expHTML='';
+  if(isDealer){
+    expHTML=`<div class="exp-section exp-rule"><div class="exp-label">✅ 正しいルール・手順</div><div class="exp-text">${q.rule}</div></div>
+    <div class="exp-section exp-trap"><div class="exp-label">⚠ よくある間違い・注意点</div><div class="exp-text">${q.trap}</div></div>`;
+  } else if(isICM){
+    expHTML=`<div class="exp-section exp-icm"><div class="exp-label">🎯 ICM解説</div><div class="exp-text">${q.gto}</div></div>
+    <div class="exp-section exp-exploit"><div class="exp-label">エクスプロイト観点</div><div class="exp-text">${q.exploit}</div></div>`;
+  } else {
+    expHTML=`<div class="exp-section exp-gto"><div class="exp-label">GTO 観点</div><div class="exp-text">${q.gto}</div></div>
+    <div class="exp-section exp-exploit"><div class="exp-label">エクスプロイト観点</div><div class="exp-text">${q.exploit}</div></div>`;
+  }
+
+  const bClass=isDealer?'btn-primary dealer':isICM?'btn-primary icm-btn':'btn-primary';
+  document.getElementById('feedback-area').innerHTML=`
+    <div class="result-banner ${isCorrect?'correct':'wrong'}">${isCorrect?'✓ 正解！':'✗ 不正解 — 正解: '+q.opts[q.cor]}</div>
+    <div class="explanation-box">${expHTML}</div>
+    <div class="action-row">
+      <button class="btn-secondary" onclick="showPage('report',document.querySelectorAll('.nav-tab')[2])">レポートへ</button>
+      <button class="${bClass}" onclick="nextQ()">次の問題 →</button>
+    </div>`;
+}
+
+function nextQ(){currentQ++;renderQuiz();window.scrollTo(0,0);}
+
+/* ═══ COMPLETE ═══ */
+function renderComplete(){
+  const correct=sessionAnswers.filter(a=>a.correct).length;
+  const total=questionQueue.length;
+  const pct=Math.round((correct/total)*100);
+  const isD=currentMode==='dealer';
+  let grade,gc,gb;
+  if(pct>=80){grade='優秀';gc='#173404';gb='#eaf3de';}
+  else if(pct>=60){grade='良好';gc='#0c447c';gb='#e6f1fb';}
+  else if(pct>=40){grade='要練習';gc='#633806';gb='#faeeda';}
+  else{grade='基礎から';gc='#501313';gb='#fcebeb';}
+
+  const hist=getHist(currentMode);
+  hist.push(...sessionAnswers.filter(s=>s.mode===currentMode));
+  saveHist(currentMode,hist);
+
+  const bClass=isD?'btn-primary dealer':'btn-primary';
+  document.getElementById('page-quiz').innerHTML=`
+    <div class="complete-screen">
+      <div class="complete-suit">${isD?'🎰':'♠'}</div>
+      <div class="complete-title">${isD?'ディーラー研修':'ポーカークイズ'}完了！</div>
+      <div class="complete-sub">${correct}/${total}問正解<span class="grade-badge" style="color:${gc};background:${gb}">${grade}</span></div>
+      <div class="stats-row">
+        <div class="stat-box"><div class="stat-lbl">正解数</div><div class="stat-val" style="color:${gc}">${correct}</div></div>
+        <div class="stat-box"><div class="stat-lbl">正答率</div><div class="stat-val">${pct}%</div></div>
+        <div class="stat-box"><div class="stat-lbl">問題数</div><div class="stat-val">${total}</div></div>
+      </div>
+      <div>
+        <button class="btn-gold" onclick="showPage('report',document.querySelectorAll('.nav-tab')[2])">📊 分析レポート</button>
+        <button class="${bClass}" style="margin:4px" onclick="restart()">↺ もう一度</button>
+      </div>
+    </div>`;
+}
+function restart(){quizStarted=false;sessionAnswers=[];currentQ=0;renderCatSelector();}
+
+/* ═══ HISTORY ═══ */
+function renderHistory(){
+  const ph=[...getHist('poker'),...sessionAnswers.filter(s=>s.mode==='poker')];
+  const dh=[...getHist('dealer'),...sessionAnswers.filter(s=>s.mode==='dealer')];
+  function mkTable(arr,mode){
+    if(arr.length===0)return`<div class="empty-state"><div class="empty-suit">${mode==='dealer'?'🎰':'♦'}</div><div class="empty-text">まだ履歴がありません</div></div>`;
+    const rows=arr.slice(-30).reverse().map(a=>{
+      const gt=a.game?`<span class="tag tag-game">${a.game}</span> `:'';
+      const it=a.cat==='ICM'?`<span class="tag tag-icm">ICM</span> `:'';
+      return`<tr><td>${a.date||'今日'}</td><td>${it}${gt}${a.cat}${a.sub?'/'+a.sub:''}</td><td><span class="tag ${a.correct?'tag-ok':'tag-ng'}">${a.correct?'正解':'不正解'}</span></td></tr>`;
+    }).join('');
+    return`<table class="history-table"><thead><tr><th>日付</th><th>カテゴリ</th><th>結果</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  document.getElementById('page-history').innerHTML=`
+    <div class="section-card">
+      <div class="mode-segment">
+        <button class="seg-btn ${historyView==='poker'?'active-poker':''}" onclick="switchHV('poker')">♠ ポーカー戦略</button>
+        <button class="seg-btn ${historyView==='dealer'?'active-dealer':''}" onclick="switchHV('dealer')">🎰 ディーラー研修</button>
+      </div>
+      <div class="section-title ${historyView==='dealer'?'dealer-title':''}">回答履歴（直近30問）</div>
+      ${mkTable(historyView==='dealer'?dh:ph,historyView)}
+    </div>`;
+}
+function switchHV(m){historyView=m;renderHistory();}
+
+/* ═══ REPORT ═══ */
+function renderReport(){
+  const ph=[...getHist('poker'),...sessionAnswers.filter(s=>s.mode==='poker')];
+  const dh=[...getHist('dealer'),...sessionAnswers.filter(s=>s.mode==='dealer')];
+
+  function mkReport(arr,mode){
+    const isD=mode==='dealer';
+    if(arr.length===0)return`<div class="empty-state"><div class="empty-suit">${isD?'🎰':'♣'}</div><div class="empty-text">${isD?'ディーラー研修':'ポーカークイズ'}を完了するとレポートが表示されます。</div></div>`;
+    const total=arr.length;const correct=arr.filter(a=>a.correct).length;const pct=Math.round((correct/total)*100);
+    const cats={};
+    arr.forEach(a=>{
+      const key=isD?(a.game?`${a.game}/${a.cat}`:a.cat):(a.cat==='ICM'?`ICM(${a.sub||'全般'})`:a.cat);
+      if(!cats[key])cats[key]={total:0,correct:0};
+      cats[key].total++;if(a.correct)cats[key].correct++;
+    });
+    const catRows=Object.entries(cats).sort((a,b)=>(b[1].correct/b[1].total)-(a[1].correct/a[1].total)).map(([c,d])=>{
+      const p=Math.round((d.correct/d.total)*100);
+      const color=p>=70?'#639922':p>=40?'#ba7517':'#a32d2d';
+      return`<div class="cat-row"><span class="cat-name">${c}</span><div class="cat-bar-wrap"><div class="cat-bar-fill" style="width:${p}%;background:${color}"></div></div><span class="cat-pct" style="color:${color}">${p}%</span></div>`;
+    }).join('');
+    const weak=Object.entries(cats).filter(([,d])=>(d.correct/d.total)<0.5).map(([c])=>c);
+    const strong=Object.entries(cats).filter(([,d])=>(d.correct/d.total)>=0.7).map(([c])=>c);
+    const tips={ICM:'ICMの計算方法とバブル付近の意思決定を重点的に練習しましょう。','プリフロップ':'ポジション別のオープンレンジとリジャム手順を確認。','ポストフロップ':'エクイティ×ポジションの組み合わせを意識した判断を。','ベットサイズ':'ボードテクスチャーとレンジに応じたサイズ選択を練習。','キャッシュゲーム':'SPRとポットオッズの計算を実戦で練習。','BLACKJACK':'スプリット後の配当ルール・インシュアランスの手順を再確認。','BACCARAT':'バンカードローイングテーブルとコミッション計算を繰り返し練習。','ROULETTE':'ノーモアベットのタイミングと各ベットタイプの配当計算を徹底的に。','POKER':'フロアコール判断とVerbally Binding Actionの原則を叩き込んで。'};
+    let advHTML='';
+    if(weak.length>0){
+      const items=weak.map(w=>{const k=Object.keys(tips).find(k=>w.includes(k));return`<li><strong>${w}</strong>：${k?tips[k]:'基本的な手順の見直しを。'}</li>`;}).join('');
+      advHTML+=`<div class="advice-section advice-weak"><div class="advice-header">⚠ 要改善エリア</div><div class="advice-text"><ul>${items}</ul></div></div>`;
+    }
+    if(strong.length>0)advHTML+=`<div class="advice-section advice-strong"><div class="advice-header">✓ 得意エリア</div><div class="advice-text"><strong>${strong.join('・')}</strong> は高い正答率を維持しています。</div></div>`;
+    if(!advHTML)advHTML=`<div class="advice-section advice-strong"><div class="advice-header">総合評価</div><div class="advice-text">全カテゴリで良好なパフォーマンスです！引き続き継続してください。</div></div>`;
+    const sc=isD?'var(--purple)':'var(--green)';
+    return`<div class="report-stats-row">
+      <div class="report-stat"><div class="report-stat-lbl">総回答</div><div class="report-stat-val">${total}</div></div>
+      <div class="report-stat"><div class="report-stat-lbl">正解数</div><div class="report-stat-val" style="color:${sc}">${correct}</div></div>
+      <div class="report-stat"><div class="report-stat-lbl">正答率</div><div class="report-stat-val">${pct}%</div></div>
+    </div>
+    <div class="section-card"><div class="section-title ${isD?'dealer-title':''}">カテゴリ別 正答率</div>${catRows}</div>
+    <div class="section-card"><div class="section-title ${isD?'dealer-title':''}">週次 改善アドバイス</div><div class="advice-wrap">${advHTML}</div></div>`;
+  }
+  document.getElementById('page-report').innerHTML=`
+    <div class="section-card" style="padding-bottom:.5rem">
+      <div class="mode-segment">
+        <button class="seg-btn ${reportView==='poker'?'active-poker':''}" onclick="switchRV('poker')">♠ ポーカー戦略</button>
+        <button class="seg-btn ${reportView==='dealer'?'active-dealer':''}" onclick="switchRV('dealer')">🎰 ディーラー研修</button>
+      </div>
+    </div>
+    <div>${mkReport(reportView==='dealer'?dh:ph,reportView)}</div>`;
+}
+function switchRV(m){reportView=m;renderReport();}
+
+/* ═══ DATA PAGE ═══ */
+function renderData(){
+  const ph=getHist('poker');const dh=getHist('dealer');
+  document.getElementById('page-data').innerHTML=`
+    <div class="qs-info-box">
+      <div class="qs-info-title">📦 問題バンク情報</div>
+      <div class="qs-info-row"><span class="qs-info-label">♠ ポーカー問題数</span><span class="qs-info-val">${POKER_Q.length}問</span></div>
+      <div class="qs-info-row"><span class="qs-info-label">🎰 ディーラー問題数</span><span class="qs-info-val">${DEALER_Q.length}問</span></div>
+      <div class="qs-info-row"><span class="qs-info-label">JSONファイル</span><span class="qs-info-val" style="font-size:11px;color:var(--text2)">questions_poker.json / questions_dealer.json</span></div>
+    </div>
+    <div class="migration-box">
+      <div class="migration-title">💾 学習データ管理</div>
+      <div class="migration-sub">データをバックアップしたり、旧バージョンのデータを移行できます。</div>
+      <div class="migration-btns">
+        <button class="btn-export" onclick="exportData()">⬇ エクスポート</button>
+        <button class="btn-import" onclick="document.getElementById('importFile').click()">⬆ インポート</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+      <div id="migration-msg"></div>
+    </div>
+    <div class="section-card">
+      <div class="section-title">現在の学習データ</div>
+      <div style="font-family:sans-serif;font-size:13px;color:var(--text2);line-height:2.2">
+        ♠ ポーカー履歴：<strong>${ph.length}</strong>問<br>
+        🎰 ディーラー履歴：<strong>${dh.length}</strong>問<br>
+        合計：<strong>${ph.length+dh.length}</strong>問
+      </div>
+      <div style="margin-top:1rem">
+        <button class="btn-secondary" style="color:#a32d2d;border-color:#a32d2d;font-size:12px" onclick="clearData()">🗑 全データを削除</button>
+      </div>
+    </div>`;
+}
+
+function exportData(){
+  const data={version:'v4',exportDate:new Date().toISOString(),poker:getHist('poker'),dealer:getHist('dealer')};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=`pokeriq_data_${new Date().toISOString().slice(0,10)}.json`;a.click();
+  URL.revokeObjectURL(url);
+  document.getElementById('migration-msg').innerHTML=`<div class="migration-msg ok">✅ エクスポート完了しました</div>`;
+}
+
+function importData(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    try{
+      const data=JSON.parse(ev.target.result);
+      const newP=[...getHist('poker'),...(data.poker||[])];
+      const newD=[...getHist('dealer'),...(data.dealer||[])];
+      // 旧バージョン対応
+      if(data.piq_hist_poker)newP.push(...data.piq_hist_poker);
+      if(data.piq_hist_dealer)newD.push(...data.piq_hist_dealer);
+      if(data.piq3_poker)newP.push(...JSON.parse(data.piq3_poker||'[]'));
+      saveHist('poker',newP);saveHist('dealer',newD);
+      document.getElementById('migration-msg').innerHTML=`<div class="migration-msg ok">✅ インポート完了：ポーカー${(data.poker||[]).length}件、ディーラー${(data.dealer||[]).length}件を追加</div>`;
+      renderData();
+    }catch(err){
+      document.getElementById('migration-msg').innerHTML=`<div class="migration-msg err">❌ ファイルの読み込みに失敗しました</div>`;
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearData(){
+  if(confirm('全ての学習データを削除します。この操作は取り消せません。よろしいですか？')){
+    localStorage.removeItem('piq4_poker');localStorage.removeItem('piq4_dealer');
+    renderData();
+  }
+}
+
+/* ═══ CHIP COUNTER ═══ */
+.chip-screen{background:var(--surface);border-radius:12px;border:1px solid var(--border);overflow:hidden;box-shadow:0 2px 14px rgba(0,0,0,.07);margin-bottom:1rem;}
+.chip-header{background:#1a1a2e;padding:.875rem 1.25rem;display:flex;align-items:center;justify-content:space-between;}
+.chip-header-title{font-family:sans-serif;font-size:14px;font-weight:bold;color:#fff;letter-spacing:.05em;}
+.chip-level-badge{font-family:sans-serif;font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(255,255,255,.15);color:rgba(255,255,255,.8);border:1px solid rgba(255,255,255,.25);}
+.chip-body{padding:1.25rem;}
+.chip-display{background:#1a5c2a;background-image:radial-gradient(circle at 50%,#1f7a43 0%,#0f4a26 100%);border-radius:10px;border:2px solid #0a3319;padding:1.5rem 1rem;margin:1rem 0;min-height:140px;display:flex;flex-direction:column;gap:14px;align-items:center;justify-content:center;}
+.chip-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;}
+.chip-svg{filter:drop-shadow(0 3px 4px rgba(0,0,0,0.5));cursor:default;}
+.chip-question{font-family:sans-serif;font-size:15px;font-weight:bold;color:var(--text);text-align:center;margin:.75rem 0;}
+.chip-opts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:1rem 0;}
+.chip-opt{padding:12px;border:1.5px solid var(--border2);border-radius:8px;background:var(--surface);color:var(--text);font-family:sans-serif;font-size:14px;font-weight:bold;cursor:pointer;text-align:center;transition:all .15s;}
+.chip-opt:hover:not(:disabled){background:var(--surface2);border-color:#1a1a2e;transform:translateY(-1px);}
+.chip-opt:disabled{cursor:default;transform:none;}
+.chip-opt.correct{background:var(--green-bg);border-color:var(--green-border);color:var(--green-text);}
+.chip-opt.wrong{background:var(--red-bg);border-color:var(--red-border);color:var(--red-text);}
+.chip-result{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;margin:.75rem 0;font-family:sans-serif;font-size:15px;font-weight:bold;}
+.chip-result.correct{background:var(--green-bg);color:var(--green-text);border:1px solid var(--green-border);}
+.chip-result.wrong{background:var(--red-bg);color:var(--red-text);border:1px solid var(--red-border);}
+.chip-answer-reveal{font-family:sans-serif;font-size:13px;color:var(--text2);margin:.5rem 0;text-align:center;}
+.chip-score-area{display:flex;gap:10px;margin-bottom:1rem;flex-wrap:wrap;}
+.chip-stat{flex:1;min-width:75px;background:var(--surface2);border-radius:8px;padding:.75rem;text-align:center;}
+.chip-stat-lbl{font-family:sans-serif;font-size:11px;color:var(--text3);margin-bottom:3px;}
+.chip-stat-val{font-size:22px;font-weight:bold;color:var(--text);}
+.chip-level-btns{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap;}
+.chip-lvl-btn{padding:7px 16px;border-radius:20px;font-size:12px;font-family:sans-serif;cursor:pointer;border:1.5px solid var(--border2);background:var(--surface);color:var(--text2);font-weight:bold;transition:all .15s;}
+.chip-lvl-btn.active{background:#1a1a2e;color:#fff;border-color:#1a1a2e;}
+.chip-breakdown{font-family:sans-serif;font-size:12px;color:rgba(255,255,255,.6);text-align:center;margin-top:8px;line-height:1.8;}
+
+/* ═══════════════════════════════════════
+   CHIP COUNTER GAME
+═══════════════════════════════════════ */
+const CHIPS = [
+  {val:1,   color:'#e8e8e8', border:'#aaa', text:'#333', label:'$1'},
+  {val:5,   color:'#e63946', border:'#a01a23', text:'#fff', label:'$5'},
+  {val:25,  color:'#2ecc71', border:'#1a8a4a', text:'#fff', label:'$25'},
+  {val:100, color:'#2255cc', border:'#1a3d99', text:'#fff', label:'$100'},
+  {val:500, color:'#8e24aa', border:'#5c1070', text:'#fff', label:'$500'},
+];
+
+let chipLevel = 'easy';
+let chipScore = {correct:0, total:0, streak:0, bestStreak:0};
+let chipAnswered = false;
+let chipCorrectAns = 0;
+
+const CHIP_LEVELS = {
+  easy:   {label:'初級', chips:[1,5,25],       minChips:2, maxChips:5,  maxTotal:100},
+  medium: {label:'中級', chips:[1,5,25,100],   minChips:3, maxChips:7,  maxTotal:500},
+  hard:   {label:'上級', chips:[5,25,100,500], minChips:4, maxChips:10, maxTotal:2000},
+};
+
+function makeChipSVG(chip, size=52) {
+  const r = size/2;
+  const ir = r * 0.72;
+  const notchR = r * 0.09;
+  const notchCount = 8;
+  let notches = '';
+  for(let i=0;i<notchCount;i++){
+    const angle = (i/notchCount)*Math.PI*2;
+    const nx = r + (r-notchR*0.5)*Math.cos(angle);
+    const ny = r + (r-notchR*0.5)*Math.sin(angle);
+    notches += `<circle cx="${nx.toFixed(1)}" cy="${ny.toFixed(1)}" r="${notchR}" fill="${chip.border}" opacity="0.9"/>`;
+  }
+  const fontSize = chip.val >= 100 ? r*0.3 : r*0.34;
+  return `<svg class="chip-svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${r}" cy="${r}" r="${r}" fill="${chip.border}"/>
+    <circle cx="${r}" cy="${r}" r="${r*0.92}" fill="${chip.color}"/>
+    ${notches}
+    <circle cx="${r}" cy="${r}" r="${ir}" fill="${chip.color}" stroke="${chip.border}" stroke-width="2"/>
+    <circle cx="${r}" cy="${r}" r="${ir*0.82}" fill="rgba(255,255,255,0.08)"/>
+    <text x="${r}" y="${r}" dominant-baseline="central" text-anchor="middle" fill="${chip.text}" font-size="${fontSize}" font-family="sans-serif" font-weight="bold">${chip.label}</text>
+  </svg>`;
+}
+
+function generateChipQuestion() {
+  const lvl = CHIP_LEVELS[chipLevel];
+  const availableChips = CHIPS.filter(c => lvl.chips.includes(c.val));
+  
+  // チップをランダムに選択
+  const count = lvl.minChips + Math.floor(Math.random() * (lvl.maxChips - lvl.minChips + 1));
+  const selected = [];
+  let total = 0;
+  
+  for(let i=0;i<count;i++){
+    const chip = availableChips[Math.floor(Math.random()*availableChips.length)];
+    selected.push(chip);
+    total += chip.val;
+  }
+  
+  if(total > lvl.maxTotal){
+    return generateChipQuestion(); // 上限超えたら再生成
+  }
+  
+  // 選択肢生成（正解+3つのダミー）
+  const opts = new Set([total]);
+  while(opts.size < 4){
+    const diff = [-total*0.2, total*0.1, -total*0.1, total*0.2, 5, -5, 10, -10, 25, -25, 100, -100];
+    const d = diff[Math.floor(Math.random()*diff.length)];
+    const wrong = Math.max(1, Math.round((total + d) / 5) * 5);
+    if(wrong !== total && wrong > 0) opts.add(wrong);
+  }
+  
+  // シャッフル
+  const optsArr = [...opts].sort(() => Math.random()-0.5);
+  const correctIdx = optsArr.indexOf(total);
+  
+  // チップのグループ化（同じ額面をまとめて表示）
+  const grouped = {};
+  selected.forEach(c => { grouped[c.val] = (grouped[c.val]||0)+1; });
+  
+  return { selected, grouped, total, opts: optsArr, correctIdx };
+}
+
+function renderChip(){
+  const container = document.getElementById('page-chip');
+  const lvlInfo = CHIP_LEVELS[chipLevel];
+  const pct = chipScore.total > 0 ? Math.round((chipScore.correct/chipScore.total)*100) : 0;
+  
+  container.innerHTML = `
+    <div class="chip-score-area">
+      <div class="chip-stat"><div class="chip-stat-lbl">正解数</div><div class="chip-stat-val" style="color:var(--green)">${chipScore.correct}</div></div>
+      <div class="chip-stat"><div class="chip-stat-lbl">正答率</div><div class="chip-stat-val">${pct}%</div></div>
+      <div class="chip-stat"><div class="chip-stat-lbl">連続正解</div><div class="chip-stat-val" style="color:var(--gold)">${chipScore.streak}</div></div>
+      <div class="chip-stat"><div class="chip-stat-lbl">最高連続</div><div class="chip-stat-val">${chipScore.bestStreak}</div></div>
+    </div>
+    <div class="chip-level-btns">
+      ${Object.entries(CHIP_LEVELS).map(([k,v])=>`<button class="chip-lvl-btn${chipLevel===k?' active':''}" onclick="setChipLevel('${k}')">${v.label}（${v.chips.map(c=>'$'+c).join('/')}）</button>`).join('')}
+    </div>
+    <div class="chip-screen">
+      <div class="chip-header">
+        <span class="chip-header-title">🎰 チップカウント</span>
+        <span class="chip-level-badge">${lvlInfo.label}</span>
+      </div>
+      <div class="chip-body">
+        <div id="chip-q-area"></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:.5rem">
+      <button class="btn-secondary" style="font-size:12px" onclick="resetChipScore()">スコアリセット</button>
+    </div>`;
+  
+  renderChipQuestion();
+}
+
+function renderChipQuestion(){
+  const q = generateChipQuestion();
+  chipCorrectAns = q.total;
+  chipAnswered = false;
+  
+  // チップ表示HTML（同じ額面をまとめてグループ表示）
+  const groups = Object.entries(q.grouped).sort((a,b)=>b[0]-a[0]);
+  const rows = [];
+  let currentRow = [];
+  let rowCount = 0;
+  
+  groups.forEach(([val, cnt]) => {
+    const chip = CHIPS.find(c=>c.val===parseInt(val));
+    for(let i=0;i<cnt;i++){
+      currentRow.push(makeChipSVG(chip, 54));
+      rowCount++;
+      if(rowCount >= 5){ rows.push(currentRow.join('')); currentRow=[]; rowCount=0; }
+    }
+  });
+  if(currentRow.length) rows.push(currentRow.join(''));
+  
+  // 内訳テキスト
+  const breakdown = groups.map(([val,cnt])=>{
+    const chip = CHIPS.find(c=>c.val===parseInt(val));
+    return `${chip.label}×${cnt}枚`;
+  }).join('　');
+  
+  const optsHTML = q.opts.map((o,i)=>
+    `<button class="chip-opt" id="copt-${i}" onclick="selectChipAnswer(${i},${o},${q.correctIdx})">${'$'+o.toLocaleString()}</button>`
+  ).join('');
+  
+  document.getElementById('chip-q-area').innerHTML = `
+    <div class="chip-display">
+      ${rows.map(r=>`<div class="chip-row">${r}</div>`).join('')}
+      <div class="chip-breakdown">${breakdown}</div>
+    </div>
+    <p class="chip-question">このチップの合計金額はいくら？</p>
+    <div class="chip-opts">${optsHTML}</div>
+    <div id="chip-fb"></div>`;
+}
+
+function selectChipAnswer(idx, chosen, correctIdx){
+  if(chipAnswered) return;
+  chipAnswered = true;
+  const isCorrect = idx === correctIdx;
+  
+  chipScore.total++;
+  if(isCorrect){
+    chipScore.correct++;
+    chipScore.streak++;
+    if(chipScore.streak > chipScore.bestStreak) chipScore.bestStreak = chipScore.streak;
+  } else {
+    chipScore.streak = 0;
+  }
+  
+  // ボタンに色付け
+  for(let i=0;i<4;i++){
+    const btn = document.getElementById('copt-'+i);
+    if(!btn) continue;
+    btn.disabled = true;
+    if(i===correctIdx) btn.classList.add('correct');
+    if(i===idx && !isCorrect) btn.classList.add('wrong');
+  }
+  
+  const pct = Math.round((chipScore.correct/chipScore.total)*100);
+  document.getElementById('chip-fb').innerHTML = `
+    <div class="chip-result ${isCorrect?'correct':'wrong'}">
+      ${isCorrect ? '✓ 正解！ $'+chipCorrectAns.toLocaleString() : '✗ 不正解 — 正解は $'+chipCorrectAns.toLocaleString()}
+    </div>
+    <div class="action-row">
+      <span style="font-family:sans-serif;font-size:12px;color:var(--text3)">通算 ${chipScore.correct}/${chipScore.total}問（${pct}%）</span>
+      <button class="btn-primary" style="background:#1a1a2e" onclick="renderChipQuestion()">次の問題 →</button>
+    </div>`;
+  
+  // スコアエリア更新
+  const stats = document.querySelectorAll('.chip-stat-val');
+  if(stats[0]) stats[0].textContent = chipScore.correct;
+  if(stats[1]) stats[1].textContent = pct+'%';
+  if(stats[2]) stats[2].textContent = chipScore.streak;
+  if(stats[3]) stats[3].textContent = chipScore.bestStreak;
+}
+
+function setChipLevel(level){
+  chipLevel = level;
+  renderChip();
+}
+
+function resetChipScore(){
+  if(confirm('チップカウントのスコアをリセットします。よろしいですか？')){
+    chipScore = {correct:0, total:0, streak:0, bestStreak:0};
+    renderChip();
+  }
+}
+
+/* ── INIT ── */
+loadQuestions();
+</script>
+</body>
+</html>
